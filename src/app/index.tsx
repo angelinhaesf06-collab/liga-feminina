@@ -12,8 +12,8 @@ export default function HomeScreen() {
       <View style={styles.content}>
         <View style={styles.header}>
           <Trophy size={64} color={Colors.accent} />
-          <Text style={styles.title}>Liga Feminina</Text>
-          <Text style={styles.subtitle}>Beach Tennis de Areia</Text>
+          <Text style={styles.title}>LBT</Text>
+          <Text style={styles.subtitle}>Liga de Beach Tennis</Text>
         </View>
 
         <View style={styles.buttonContainer}>

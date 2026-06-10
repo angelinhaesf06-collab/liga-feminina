@@ -68,7 +68,7 @@ export default function OrganizeScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>1. Quantidade de Jogadoras</Text>
+          <Text style={styles.sectionTitle}>1. Quantidade de Atletas</Text>
           <View style={styles.optionsGrid}>
             {PLAYER_OPTIONS.map((count) => (
               <TouchableOpacity
@@ -111,7 +111,7 @@ export default function OrganizeScreen() {
             </Text>
             <TouchableOpacity style={styles.addButton}>
               <UserPlus size={20} color={Colors.primary} />
-              <Text style={styles.addButtonText}>Nova</Text>
+              <Text style={styles.addButtonText}>Novo</Text>
             </TouchableOpacity>
           </View>
           
@@ -138,7 +138,7 @@ export default function OrganizeScreen() {
                 </TouchableOpacity>
               ))}
               {availablePlayers.length === 0 && (
-                <Text style={styles.emptyText}>Nenhuma jogadora cadastrada.</Text>
+                <Text style={styles.emptyText}>Nenhum(a) atleta cadastrado(a).</Text>
               )}
             </View>
           )}

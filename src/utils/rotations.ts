@@ -1,5 +1,5 @@
 /**
- * Lógica de Rotação "Rainha da Areia"
+ * Lógica de Rotação "Rei e Rainha da Areia"
  * Baseada em matrizes fixas para garantir que as duplas rotacionem 
  * e as jogadoras não repitam parcerias/oponentes excessivamente.
  */
