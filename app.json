@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "liga-feminina",
-    "slug": "liga-feminina",
-    "scheme": "liga-feminina",
+    "name": "Nossa Arena",
+    "slug": "nossa-arena",
+    "scheme": "nossa-arena",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

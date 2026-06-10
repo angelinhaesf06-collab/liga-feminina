@@ -21,7 +21,7 @@ export default function RootLayout() {
           },
         }}
       >
-        <Stack.Screen name="index" options={{ title: 'Liga Feminina' }} />
+        <Stack.Screen name="index" options={{ title: 'Nossa Arena' }} />
         <Stack.Screen name="join" options={{ title: 'Entrar no Torneio' }} />
         <Stack.Screen name="organize" options={{ title: 'Novo Torneio' }} />
         <Stack.Screen name="tournament" options={{ title: 'Torneio em Andamento' }} />

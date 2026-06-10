@@ -1,4 +1,4 @@
-# NOSSA ARENA - Liga de Beach Tennis
+# Nossa Arena - Liga de Beach Tennis
 
 Aplicativo mobile para organização e acompanhamento de torneios de Beach Tennis (Formato Rei e Rainha da Areia).
 
