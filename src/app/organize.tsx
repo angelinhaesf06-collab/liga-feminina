@@ -1,16 +1,68 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Settings, UserPlus, CheckCircle2 } from 'lucide-react-native';
+import { UserPlus, CheckCircle2, User } from 'lucide-react-native';
 import Colors from '../constants/Colors';
+import { playerService } from '../services/playerService';
+import { tournamentService } from '../services/tournamentService';
 
 const PLAYER_OPTIONS = [8, 10, 12, 16, 24];
 const ROUND_OPTIONS = [4, 6];
 
 export default function OrganizeScreen() {
-  const [playerCount, setPlayerCount] = useState(12);
+  const [playerCount, setPlayerCount] = useState(8);
   const [rounds, setRounds] = useState(4);
+  const [availablePlayers, setAvailablePlayers] = useState<any[]>([]);
+  const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    fetchPlayers();
+  }, []);
+
+  async function fetchPlayers() {
+    try {
+      const data = await playerService.getAll();
+      setAvailablePlayers(data);
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível carregar as jogadoras.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const togglePlayer = (id: string) => {
+    if (selectedPlayers.includes(id)) {
+      setSelectedPlayers(selectedPlayers.filter(p => p !== id));
+    } else {
+      if (selectedPlayers.length < playerCount) {
+        setSelectedPlayers([...selectedPlayers, id]);
+      } else {
+        Alert.alert('Limite atingido', `Você selecionou o limite de ${playerCount} jogadoras.`);
+      }
+    }
+  };
+
+  const handleGenerateTournament = async () => {
+    if (selectedPlayers.length !== playerCount) {
+      Alert.alert('Atenção', `Selecione exatamente ${playerCount} jogadoras.`);
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const { tournament, pin } = await tournamentService.createTournament(selectedPlayers, rounds);
+      Alert.alert('Sucesso', `Torneio criado! PIN do Dia: ${pin}`, [
+        { text: 'OK', onPress: () => router.push('/tournament') }
+      ]);
+    } catch (error) {
+      Alert.alert('Erro', 'Falha ao criar torneio no banco de dados.');
+    } finally {
+      setCreating(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -22,7 +74,10 @@ export default function OrganizeScreen() {
               <TouchableOpacity
                 key={count}
                 style={[styles.optionCard, playerCount === count && styles.optionCardActive]}
-                onPress={() => setPlayerCount(count)}
+                onPress={() => {
+                  setPlayerCount(count);
+                  setSelectedPlayers([]); // Reseta seleção ao mudar número
+                }}
               >
                 <Text style={[styles.optionText, playerCount === count && styles.optionTextActive]}>
                   {count}
@@ -51,26 +106,57 @@ export default function OrganizeScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>3. Selecionar Jogadoras</Text>
+            <Text style={styles.sectionTitle}>
+              3. Selecionar ({selectedPlayers.length}/{playerCount})
+            </Text>
             <TouchableOpacity style={styles.addButton}>
               <UserPlus size={20} color={Colors.primary} />
               <Text style={styles.addButtonText}>Nova</Text>
             </TouchableOpacity>
           </View>
           
-          <View style={styles.playerListPlaceholder}>
-            <Text style={styles.placeholderText}>
-              Lista de jogadoras cadastradas aparecerá aqui...
-            </Text>
-          </View>
+          {loading ? (
+            <ActivityIndicator color={Colors.primary} />
+          ) : (
+            <View style={styles.playerList}>
+              {availablePlayers.map((player) => (
+                <TouchableOpacity
+                  key={player.id}
+                  style={[
+                    styles.playerCard,
+                    selectedPlayers.includes(player.id) && styles.playerCardActive
+                  ]}
+                  onPress={() => togglePlayer(player.id)}
+                >
+                  <User size={18} color={selectedPlayers.includes(player.id) ? Colors.primary : Colors.secondary} />
+                  <Text style={[
+                    styles.playerName,
+                    selectedPlayers.includes(player.id) && styles.playerNameActive
+                  ]}>
+                    {player.nome}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              {availablePlayers.length === 0 && (
+                <Text style={styles.emptyText}>Nenhuma jogadora cadastrada.</Text>
+              )}
+            </View>
+          )}
         </View>
 
         <TouchableOpacity 
-          style={styles.generateButton}
-          onPress={() => router.push('/tournament')}
+          style={[styles.generateButton, creating && { opacity: 0.7 }]}
+          onPress={handleGenerateTournament}
+          disabled={creating}
         >
-          <CheckCircle2 color={Colors.white} size={24} />
-          <Text style={styles.generateButtonText}>Gerar Torneio e PIN</Text>
+          {creating ? (
+            <ActivityIndicator color={Colors.white} />
+          ) : (
+            <>
+              <CheckCircle2 color={Colors.white} size={24} />
+              <Text style={styles.generateButtonText}>Gerar Torneio e PIN</Text>
+            </>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -116,7 +202,7 @@ const styles = StyleSheet.create({
   },
   optionCardActive: {
     borderColor: Colors.primary,
-    backgroundColor: '#F7EFE6', // Versão muito clara do caramelo
+    backgroundColor: '#F7EFE6',
   },
   optionText: {
     fontSize: 16,
@@ -136,18 +222,40 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: '600',
   },
-  playerListPlaceholder: {
+  playerList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  playerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     backgroundColor: Colors.white,
-    padding: 40,
-    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderStyle: 'dashed',
-    alignItems: 'center',
   },
-  placeholderText: {
+  playerCardActive: {
+    borderColor: Colors.primary,
+    backgroundColor: '#F7EFE6',
+  },
+  playerName: {
+    fontSize: 14,
+    color: Colors.text,
+  },
+  playerNameActive: {
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  emptyText: {
     color: Colors.secondary,
+    fontStyle: 'italic',
     textAlign: 'center',
+    width: '100%',
+    marginTop: 20,
   },
   generateButton: {
     backgroundColor: Colors.primary,
@@ -165,3 +273,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
