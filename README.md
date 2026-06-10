@@ -1,6 +1,6 @@
 # LBT - Liga de Beach Tennis
 
-Aplicativo mobile para organização e acompanhamento de torneios de Beach Tennis (Formato Rainha da Praia).
+Aplicativo mobile para organização e acompanhamento de torneios de Beach Tennis (Formato Rainha da Areia).
 
 ## 🚀 Objetivo
 Foco em **agilidade e zero fricção** para organizadoras e jogadoras na beira da quadra.
@@ -26,7 +26,7 @@ Foco em **agilidade e zero fricção** para organizadoras e jogadoras na beira d
 - [x] Estrutura Base e Navegação
 - [x] Identidade Visual LBT
 - [ ] Integração com Supabase (Banco de Dados)
-- [ ] Algoritmo de Rotação de Duplas (Rainha da Praia)
+- [ ] Algoritmo de Rotação de Duplas (Rainha da Areia)
 - [ ] Placar em Tempo Real
 - [ ] Ranking Geral Acumulado
 
