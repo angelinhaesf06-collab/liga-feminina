@@ -1,0 +1,19 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fundo Marrom Café -->
+  <rect width="1024" height="1024" fill="#3E2723"/>
+  
+  <!-- Círculo Dourado Fino -->
+  <circle cx="512" cy="512" r="400" stroke="#D4AF37" stroke-width="15"/>
+  
+  <!-- Texto LBT em Creme -->
+  <text 
+    x="512" 
+    y="560" 
+    fill="#FAF0E6" 
+    font-family="Serif, 'Playfair Display', 'Cinzel'" 
+    font-size="280" 
+    font-weight="bold" 
+    text-anchor="middle"
+    letter-spacing="20"
+  >LBT</text>
+</svg>
