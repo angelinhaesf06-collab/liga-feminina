@@ -1,17 +1,29 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Hash } from 'lucide-react-native';
 import Colors from '../constants/Colors';
+import { tournamentService } from '../services/tournamentService';
 
 export default function JoinScreen() {
   const [pin, setPin] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     if (pin.length >= 4) {
-      // Aqui validaremos o PIN no Supabase posteriormente
-      router.push('/tournament');
+      setLoading(true);
+      try {
+        const tournament = await tournamentService.getTournamentByPin(pin);
+        router.push({
+          pathname: '/tournament',
+          params: { id: tournament.id }
+        });
+      } catch (error) {
+        Alert.alert('Erro', 'PIN não encontrado ou torneio finalizado.');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -39,11 +51,15 @@ export default function JoinScreen() {
           />
           
           <TouchableOpacity 
-            style={[styles.button, pin.length < 4 && styles.buttonDisabled]}
+            style={[styles.button, (pin.length < 4 || loading) && styles.buttonDisabled]}
             onPress={handleJoin}
-            disabled={pin.length < 4}
+            disabled={pin.length < 4 || loading}
           >
-            <Text style={styles.buttonText}>Entrar na Sala</Text>
+            {loading ? (
+              <ActivityIndicator color={Colors.white} />
+            ) : (
+              <Text style={styles.buttonText}>Entrar na Sala</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

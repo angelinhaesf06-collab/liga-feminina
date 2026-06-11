@@ -1,18 +1,105 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, FlatList } from 'react-native';
-import { LayoutGrid, ListOrdered, Share2 } from 'lucide-react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert, ActivityIndicator, TextInput } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { LayoutGrid, ListOrdered, Share2, Save } from 'lucide-react-native';
 import Colors from '../constants/Colors';
+import { tournamentService } from '../services/tournamentService';
 
 export default function TournamentScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [tournament, setTournament] = useState<any>(null);
+  const [matches, setMatches] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'rounds' | 'ranking'>('rounds');
   const [currentRound, setCurrentRound] = useState(1);
+  const [editingScores, setEditingScores] = useState<Record<string, { a: string, b: string }>>({});
+
+  useEffect(() => {
+    if (id) {
+      fetchData();
+    }
+  }, [id]);
+
+  async function fetchData() {
+    try {
+      const tData = await tournamentService.getTournamentById(id);
+      const mData = await tournamentService.getMatches(id);
+      setTournament(tData);
+      setMatches(mData);
+      
+      // Inicializar scores de edição
+      const scores: any = {};
+      mData.forEach(m => {
+        scores[m.id] = { 
+          a: m.placar_dupla_a?.toString() || '', 
+          b: m.placar_dupla_b?.toString() || '' 
+        };
+      });
+      setEditingScores(scores);
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Erro', 'Não foi possível carregar os dados do torneio.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const handleUpdateScore = async (matchId: string) => {
+    const score = editingScores[matchId];
+    if (score.a === '' || score.b === '') {
+      Alert.alert('Atenção', 'Preencha ambos os placares.');
+      return;
+    }
+
+    try {
+      await tournamentService.updateMatchScore(matchId, parseInt(score.a), parseInt(score.b));
+      fetchData(); // Atualiza dados e ranking
+      Alert.alert('Sucesso', 'Placar atualizado!');
+    } catch (error) {
+      Alert.alert('Erro', 'Falha ao atualizar o placar.');
+    }
+  };
+
+  const calculateRanking = () => {
+    const ranking: Record<string, { nome: string, wins: number, diff: number }> = {};
+    
+    matches.filter(m => m.finalizada).forEach(m => {
+      const players = [
+        { id: m.jogador_a1_id, nome: m.jogador_a1.nome, isA: true },
+        { id: m.jogador_a2_id, nome: m.jogador_a2.nome, isA: true },
+        { id: m.jogador_b1_id, nome: m.jogador_b1.nome, isA: false },
+        { id: m.jogador_b2_id, nome: m.jogador_b2.nome, isA: false },
+      ];
+
+      const winA = m.placar_dupla_a > m.placar_dupla_b;
+      const diff = Math.abs(m.placar_dupla_a - m.placar_dupla_b);
+
+      players.forEach(p => {
+        if (!ranking[p.id]) ranking[p.id] = { nome: p.nome, wins: 0, diff: 0 };
+        const won = (p.isA && winA) || (!p.isA && !winA);
+        if (won) {
+          ranking[p.id].wins += 1;
+          ranking[p.id].diff += diff;
+        } else {
+          ranking[p.id].diff -= diff;
+        }
+      });
+    });
+
+    return Object.values(ranking).sort((a, b) => b.wins - a.wins || b.diff - a.diff);
+  };
+
+  if (loading) return <View style={styles.center}><ActivityIndicator color={Colors.primary} /></View>;
+
+  const filteredMatches = matches.filter(m => m.rodada === currentRound);
+  const rankingData = calculateRanking();
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.pinContainer}>
           <Text style={styles.pinLabel}>PIN DO DIA:</Text>
-          <Text style={styles.pinValue}>8492</Text>
+          <Text style={styles.pinValue}>{tournament?.pin_sala}</Text>
         </View>
         <TouchableOpacity style={styles.shareButton}>
           <Share2 size={20} color={Colors.primary} />
@@ -41,7 +128,7 @@ export default function TournamentScreen() {
         {activeTab === 'rounds' ? (
           <View style={{ flex: 1 }}>
             <View style={styles.roundSelector}>
-              {[1, 2, 3, 4].map((r) => (
+              {[1, 2, 3, 4, 5, 6].slice(0, tournament?.limite_rodadas).map((r) => (
                 <TouchableOpacity 
                   key={r}
                   style={[styles.roundButton, currentRound === r && styles.roundButtonActive]}
@@ -55,34 +142,61 @@ export default function TournamentScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.matchesList}>
-              <MatchCard 
-                court={1} 
-                teamA={['Ana', 'Beatriz']} 
-                teamB={['Carla', 'Denise']} 
-                scoreA={6} 
-                scoreB={4} 
-              />
-              <MatchCard 
-                court={2} 
-                teamA={['Elena', 'Fernanda']} 
-                teamB={['Gabi', 'Helena']} 
-                scoreA={null} 
-                scoreB={null} 
-              />
+              {filteredMatches.map(m => (
+                <View key={m.id} style={styles.matchCard}>
+                  <View style={styles.matchHeader}>
+                    <Text style={styles.courtLabel}>QUADRA {m.quadra}</Text>
+                    {m.finalizada && <Text style={styles.finishedLabel}>FINALIZADO</Text>}
+                  </View>
+                  <View style={styles.matchContent}>
+                    <View style={styles.team}>
+                      <Text style={styles.playerNames}>{m.jogador_a1.nome} + {m.jogador_a2.nome}</Text>
+                      <TextInput
+                        style={styles.scoreInput}
+                        keyboardType="number-pad"
+                        value={editingScores[m.id]?.a}
+                        onChangeText={(val) => setEditingScores({...editingScores, [m.id]: {...editingScores[m.id], a: val}})}
+                        placeholder="-"
+                      />
+                    </View>
+                    <Text style={styles.vs}>VS</Text>
+                    <View style={styles.team}>
+                      <Text style={[styles.playerNames, { textAlign: 'right' }]}>{m.jogador_b1.nome} + {m.jogador_b2.nome}</Text>
+                      <TextInput
+                        style={[styles.scoreInput, { textAlign: 'right' }]}
+                        keyboardType="number-pad"
+                        value={editingScores[m.id]?.b}
+                        onChangeText={(val) => setEditingScores({...editingScores, [m.id]: {...editingScores[m.id], b: val}})}
+                        placeholder="-"
+                      />
+                    </View>
+                    <TouchableOpacity 
+                      style={styles.saveScoreButton}
+                      onPress={() => handleUpdateScore(m.id)}
+                    >
+                      <Save size={20} color={Colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
             </ScrollView>
           </View>
         ) : (
           <View style={styles.rankingContainer}>
             <View style={styles.rankingHeader}>
-              <Text style={[styles.rankingHeaderText, { flex: 1 }]}>Jogadora</Text>
+              <Text style={[styles.rankingHeaderText, { flex: 1 }]}>Atleta</Text>
               <Text style={[styles.rankingHeaderText, { width: 40 }]}>VIT</Text>
               <Text style={[styles.rankingHeaderText, { width: 40 }]}>SAL</Text>
             </View>
             <ScrollView>
-              <RankingRow rank={1} name="Ana" wins={3} diff={12} />
-              <RankingRow rank={2} name="Beatriz" wins={3} diff={8} />
-              <RankingRow rank={3} name="Carla" wins={2} diff={4} />
-              <RankingRow rank={4} name="Denise" wins={1} diff={-2} />
+              {rankingData.map((row, index) => (
+                <View key={index} style={styles.rankingRow}>
+                  <Text style={styles.rankText}>{index + 1}º</Text>
+                  <Text style={styles.nameText}>{row.nome}</Text>
+                  <Text style={styles.statText}>{row.wins}</Text>
+                  <Text style={styles.statText}>{row.diff > 0 ? `+${row.diff}` : row.diff}</Text>
+                </View>
+              ))}
             </ScrollView>
           </View>
         )}
@@ -91,42 +205,15 @@ export default function TournamentScreen() {
   );
 }
 
-function MatchCard({ court, teamA, teamB, scoreA, scoreB }: any) {
-  return (
-    <View style={styles.matchCard}>
-      <View style={styles.matchHeader}>
-        <Text style={styles.courtLabel}>QUADRA {court}</Text>
-      </View>
-      <View style={styles.matchContent}>
-        <View style={styles.team}>
-          <Text style={styles.playerNames}>{teamA.join(' + ')}</Text>
-          <Text style={styles.score}>{scoreA ?? '-'}</Text>
-        </View>
-        <Text style={styles.vs}>VS</Text>
-        <View style={styles.team}>
-          <Text style={[styles.playerNames, { textAlign: 'right' }]}>{teamB.join(' + ')}</Text>
-          <Text style={styles.score}>{scoreB ?? '-'}</Text>
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function RankingRow({ rank, name, wins, diff }: any) {
-  return (
-    <View style={styles.rankingRow}>
-      <Text style={styles.rankText}>{rank}º</Text>
-      <Text style={styles.nameText}>{name}</Text>
-      <Text style={styles.statText}>{wins}</Text>
-      <Text style={styles.statText}>{diff > 0 ? `+${diff}` : diff}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',
@@ -235,6 +322,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   matchHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 12,
     paddingBottom: 8,
     borderBottomWidth: 1,
@@ -246,6 +335,11 @@ const styles = StyleSheet.create({
     color: Colors.secondary,
     letterSpacing: 2,
   },
+  finishedLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.success,
+  },
   matchContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -256,21 +350,32 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   playerNames: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: Colors.text,
-    lineHeight: 20,
+    lineHeight: 18,
+    height: 36,
   },
-  score: {
+  scoreInput: {
     fontSize: 24,
     fontWeight: '800',
     color: Colors.primary,
+    backgroundColor: '#FDFBF7',
+    padding: 8,
+    borderRadius: 8,
+    width: 50,
   },
   vs: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     fontSize: 12,
     fontWeight: '800',
     color: Colors.border,
+  },
+  saveScoreButton: {
+    marginLeft: 12,
+    padding: 10,
+    backgroundColor: '#F7EFE6',
+    borderRadius: 10,
   },
   rankingContainer: {
     flex: 1,

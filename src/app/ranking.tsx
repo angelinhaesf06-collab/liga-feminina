@@ -1,26 +1,56 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { Trophy, Award, Medal } from 'lucide-react-native';
 import Colors from '../constants/Colors';
+import { playerService } from '../services/playerService';
 
 export default function RankingScreen() {
+  const [ranking, setRanking] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchRanking();
+  }, []);
+
+  async function fetchRanking() {
+    try {
+      const data = await playerService.getRankingGeral();
+      setRanking(data);
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível carregar o ranking geral.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Trophy size={48} color={Colors.accent} />
         <Text style={styles.title}>Hall da Fama</Text>
-        <Text style={styles.subtitle}>Desempenho acumulado de todas as jogadoras da liga.</Text>
+        <Text style={styles.subtitle}>Desempenho acumulado de todos os atletas da liga.</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.rankingTable}>
-          <RankingItem rank={1} name="Ana Silva" wins={42} titles={5} score={1240} />
-          <RankingItem rank={2} name="Beatriz Santos" wins={38} titles={3} score={1150} />
-          <RankingItem rank={3} name="Carla Oliveira" wins={35} titles={2} score={1020} />
-          <RankingItem rank={4} name="Denise Lima" wins={30} titles={1} score={980} />
-          <RankingItem rank={5} name="Elena Ferreira" wins={28} titles={1} score={950} />
-          {/* Mais jogadoras... */}
-        </View>
+        {loading ? (
+          <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
+        ) : (
+          <View style={styles.rankingTable}>
+            {ranking.map((item, index) => (
+              <RankingItem 
+                key={item.id}
+                rank={index + 1} 
+                name={item.nome} 
+                wins={item.vitorias_totais} 
+                titles={item.torneios_ganhos} 
+                score={item.pontos_totais} 
+              />
+            ))}
+            {ranking.length === 0 && (
+              <Text style={styles.emptyText}>Nenhum dado de ranking disponível ainda.</Text>
+            )}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -49,7 +79,7 @@ function RankingItem({ rank, name, wins, titles, score }: any) {
 
       <View style={styles.scoreContainer}>
         <Text style={styles.scoreValue}>{score}</Text>
-        <Text style={styles.scoreLabel}>pts</Text>
+        <Text style={styles.scoreLabel}>pts (saldo)</Text>
       </View>
     </View>
   );
