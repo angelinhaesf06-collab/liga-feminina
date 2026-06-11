@@ -36,6 +36,13 @@ export default function HomeScreen() {
 
         <TouchableOpacity 
           style={styles.rankingLink}
+          onPress={() => router.push('/athletes')}
+        >
+          <Text style={styles.rankingText}>Gerenciar Atletas (Reis e Rainhas)</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.rankingLink}
           onPress={() => router.push('/ranking')}
         >
           <Text style={styles.rankingText}>Ver Ranking Geral da Liga</Text>

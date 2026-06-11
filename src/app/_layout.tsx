@@ -26,6 +26,7 @@ export default function RootLayout() {
         <Stack.Screen name="organize" options={{ title: 'Novo Torneio' }} />
         <Stack.Screen name="tournament" options={{ title: 'Torneio em Andamento' }} />
         <Stack.Screen name="ranking" options={{ title: 'Ranking da Liga' }} />
+        <Stack.Screen name="athletes" options={{ title: 'Gerenciar Atletas' }} />
       </Stack>
     </SafeAreaProvider>
   );
